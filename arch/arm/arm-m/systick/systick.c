@@ -138,6 +138,25 @@ lk_bigtime_t current_time_hires(void)
     return res;
 }
 
+lk_bigtime_t current_time_hires_irq(void)
+{
+    uint32_t reload = SysTick->LOAD  & SysTick_LOAD_RELOAD_Msk;
+
+    uint64_t t = ticks;
+    uint32_t delta = (volatile uint32_t)SysTick->VAL;
+    DMB;
+    if (SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) {
+        delta = (volatile uint32_t)SysTick->VAL;
+        t++;
+    }
+
+    /* convert ticks to usec */
+    delta = (reload - delta) / tick_rate_mhz;
+    lk_bigtime_t res = (t * tick_interval_us) + delta;
+
+    return res;
+}
+
 void arm_cm_systick_init(uint32_t mhz)
 {
     tick_rate = mhz;
